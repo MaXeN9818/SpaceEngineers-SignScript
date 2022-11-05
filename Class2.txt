@@ -1,0 +1,144 @@
+﻿using Sandbox.Game.EntityComponents;
+using Sandbox.ModAPI.Ingame;
+using Sandbox.ModAPI.Interfaces;
+using SpaceEngineers.Game.ModAPI.Ingame;
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Linq;
+using System.Text;
+using VRage;
+using VRage.Collections;
+using VRage.Game;
+using VRage.Game.Components;
+using VRage.Game.GUI.TextPanel;
+using VRage.Game.ModAPI.Ingame;
+using VRage.Game.ModAPI.Ingame.Utilities;
+using VRage.Game.ObjectBuilders.Definitions;
+using VRageMath;
+
+namespace IngameScript
+{
+    partial class Program : MyGridProgram
+    {
+
+        string groupLCDName = "CAR - LCD-Cartelli";
+
+        RectangleF _viewport;
+
+
+        public class Freccia
+        {
+            public string titolo;
+            public float rotazione;
+            public int posizioneX;
+        }
+        public List<Freccia> ogg = new List<Freccia>();
+
+        public Program()
+        {
+            Runtime.UpdateFrequency = UpdateFrequency.Once;
+        }
+
+        /// <summary>
+        /// Leggo i dati dal customdata degli lcd e scrivo i valori
+        /// </summary>
+        /// <param name="val"></param>
+        /// ogg.Add(new Freccia() { titolo = "Zona Briefing", rotazione = 95f, posizioneX = 475});
+        /// name;rotazione;posizioneX
+        public void Oggetti(string customData)
+        {
+            ogg = new List<Freccia>();
+
+            List<string> line = customData.Split('\n').ToList();
+            line.ForEach(delegate (string e) {
+                string[] value = e.Split(';');
+                ogg.Add(new Freccia() { titolo = value[0], rotazione = float.Parse(value[1]), posizioneX = int.Parse(value[2]) });
+            });
+            return;
+        }
+
+
+
+        public void Main(string argument, UpdateType updateSource)
+        {
+            List<IMyTextPanel> lcd_Block = new List<IMyTextPanel>();
+            IMyBlockGroup grp_LCD = GridTerminalSystem.GetBlockGroupWithName(groupLCDName);
+            grp_LCD.GetBlocksOfType<IMyTextPanel>(lcd_Block, x => x.CustomData != "" && x.CubeGrid == Me.CubeGrid);
+            foreach (var lcd in lcd_Block)
+            {
+                Echo(lcd.CustomName);
+                IMyTextPanel e = lcd;
+                if (lcd != null)
+                {
+                    Oggetti(lcd.CustomData);
+                    SetupDrawSurface(ref e);
+                    var frame = e.DrawFrame();
+
+                    DrawSprites(ref frame);
+                    frame.Dispose();
+                }
+
+            }
+        }
+        public void SetupDrawSurface(ref IMyTextPanel surface)
+        {
+            surface.ScriptBackgroundColor = surface.ScriptBackgroundColor.Alpha(0.46f).Shade(0.09f);
+            //surface.ContentType = ContentType.SCRIPT;
+            //surface.Script = "";
+            _viewport = new RectangleF((surface.TextureSize - surface.SurfaceSize) / 2f, surface.SurfaceSize);
+        }
+
+        public void DrawSprites(ref MySpriteDrawFrame frame, float scale = 3f)
+        {
+
+            int Y = 0;
+            for (int i = 0; i < ogg.Count; i++)
+            {
+                Echo(_viewport.Position.ToString());
+                frame.Add(new MySprite()
+                {
+                    Type = SpriteType.TEXTURE,
+                    Alignment = TextAlignment.CENTER,
+                    Data = "SquareHollow",
+                    Position = new Vector2(256, 135) + _viewport.Position,
+                    Size = new Vector2(_viewport.Size.X - 20, 50),
+                    Color = new Color(0, 0, 255, 70).Shade(0.9f),
+                    RotationOrScale = 0f,
+                });
+                //frame.Add(new MySprite()
+                //{
+                //    Type = SpriteType.TEXTURE,
+                //    Alignment = TextAlignment.CENTER,
+                //    Data = "SquareSimple",
+                //    Position = new Vector2(256, 135) + _viewport.Position,
+                //    Size = new Vector2(_viewport.Size.X - 25, 45),
+                //    Color = new Color(0, 155, 255, 70).Shade(0.5f),
+                //    RotationOrScale = 0f,
+                //});
+                //frame.Add(new MySprite()
+                //{
+                //    Type = SpriteType.TEXTURE,
+                //    Alignment = TextAlignment.CENTER,
+                //    Data = "Arrow",
+                //    Position = new Vector2(ogg[i].posizioneX, 135) + _viewport.Position,
+                //    Size = new Vector2(45, 45),
+                //    Color = new Color(0, 255, 0, 90).Shade(1f),
+                //    RotationOrScale = ogg[i].rotazione,
+                //});
+                //frame.Add(new MySprite()
+                //{
+                //    Type = SpriteType.TEXT,
+                //    Alignment = TextAlignment.CENTER,
+                //    Data = ogg[i].titolo,
+                //    Position = new Vector2(256, 110) + _viewport.Position,
+                //    Color = new Color(255, 255, 255, 255),
+                //    RotationOrScale = 1.5f,
+                //    FontId = "ScreenCaption",
+                //});
+                Y += 50;
+            }
+        }
+    }
+}
